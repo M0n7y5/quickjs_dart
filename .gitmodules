@@ -1,0 +1,4 @@
+[submodule "src/quickjs"]
+	path = src/quickjs
+	url = https://github.com/M0n7y5/quickjs.git
+	branch = quickjs_dart
