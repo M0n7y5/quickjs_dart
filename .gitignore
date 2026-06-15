@@ -1,0 +1,4 @@
+# Dart / native build artifacts
+.dart_tool/
+build/
+.packages
