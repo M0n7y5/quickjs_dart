@@ -1,9 +1,9 @@
-/// Low-level FFI bindings for QuickJS + kirahe_qjs_shim.
+/// Low-level FFI bindings for QuickJS + qjs_shim.
 ///
 /// Uses @ffi.Native with @DefaultAsset to automatically bind to the
 /// compiled shared library (resolved by native_assets_cli).
 ///
-/// Functions prefixed with `kjs_` are from our C shim (wrappers around
+/// Functions prefixed with `qjs_` are from our C shim (wrappers around
 /// static-inline QuickJS functions). Functions without prefix are real
 /// exported symbols from QuickJS.
 // ignore_for_file: non_constant_identifier_names
@@ -27,9 +27,9 @@ final class JSContext extends ffi.Opaque {}
 
 final class JSModuleDef extends ffi.Opaque {}
 
-final class KjsBridgeQueue extends ffi.Opaque {}
+final class QjsBridgeQueue extends ffi.Opaque {}
 
-final class KjsTimeoutState extends ffi.Opaque {}
+final class QjsTimeoutState extends ffi.Opaque {}
 
 // ============================================================
 // JSValue — 16-byte struct on 64-bit (non-NaN-boxing mode)
@@ -134,16 +134,16 @@ external JSValue JS_GetGlobalObject(ffi.Pointer<JSContext> ctx);
 // ============================================================
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, ffi.Int32)>()
-external JSValue kjs_new_bool(ffi.Pointer<JSContext> ctx, int val);
+external JSValue qjs_new_bool(ffi.Pointer<JSContext> ctx, int val);
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, ffi.Int32)>()
-external JSValue kjs_new_int32(ffi.Pointer<JSContext> ctx, int val);
+external JSValue qjs_new_int32(ffi.Pointer<JSContext> ctx, int val);
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, ffi.Int64)>()
-external JSValue kjs_new_int64(ffi.Pointer<JSContext> ctx, int val);
+external JSValue qjs_new_int64(ffi.Pointer<JSContext> ctx, int val);
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, ffi.Double)>()
-external JSValue kjs_new_float64(ffi.Pointer<JSContext> ctx, double val);
+external JSValue qjs_new_float64(ffi.Pointer<JSContext> ctx, double val);
 
 @ffi.Native<
   JSValue Function(ffi.Pointer<JSContext>, ffi.Pointer<Utf8>, ffi.Size)
@@ -155,7 +155,7 @@ external JSValue JS_NewStringLen(
 );
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, ffi.Pointer<Utf8>)>()
-external JSValue kjs_new_string(
+external JSValue qjs_new_string(
   ffi.Pointer<JSContext> ctx,
   ffi.Pointer<Utf8> str,
 );
@@ -170,60 +170,60 @@ external JSValue JS_NewArray(ffi.Pointer<JSContext> ctx);
 external JSValue JS_NewBigInt64(ffi.Pointer<JSContext> ctx, int val);
 
 @ffi.Native<JSValue Function()>()
-external JSValue kjs_null();
+external JSValue qjs_null();
 
 @ffi.Native<JSValue Function()>()
-external JSValue kjs_undefined();
+external JSValue qjs_undefined();
 
 @ffi.Native<JSValue Function()>()
-external JSValue kjs_exception();
+external JSValue qjs_exception();
 
 // ============================================================
 // Value memory management (via C shim)
 // ============================================================
 
 @ffi.Native<ffi.Void Function(ffi.Pointer<JSContext>, JSValue)>()
-external void kjs_free_value(ffi.Pointer<JSContext> ctx, JSValue val);
+external void qjs_free_value(ffi.Pointer<JSContext> ctx, JSValue val);
 
 @ffi.Native<ffi.Void Function(ffi.Pointer<JSRuntime>, JSValue)>()
-external void kjs_free_value_rt(ffi.Pointer<JSRuntime> rt, JSValue val);
+external void qjs_free_value_rt(ffi.Pointer<JSRuntime> rt, JSValue val);
 
 @ffi.Native<JSValue Function(ffi.Pointer<JSContext>, JSValue)>()
-external JSValue kjs_dup_value(ffi.Pointer<JSContext> ctx, JSValue val);
+external JSValue qjs_dup_value(ffi.Pointer<JSContext> ctx, JSValue val);
 
 // ============================================================
 // Type checking (via C shim)
 // ============================================================
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_value_get_tag(JSValue val);
+external int qjs_value_get_tag(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_value_get_norm_tag(JSValue val);
+external int qjs_value_get_norm_tag(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_number(JSValue val);
+external int qjs_is_number(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(ffi.Pointer<JSContext>, JSValue)>()
-external int kjs_is_big_int(ffi.Pointer<JSContext> ctx, JSValue val);
+external int qjs_is_big_int(ffi.Pointer<JSContext> ctx, JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_bool(JSValue val);
+external int qjs_is_bool(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_null(JSValue val);
+external int qjs_is_null(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_undefined(JSValue val);
+external int qjs_is_undefined(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_exception(JSValue val);
+external int qjs_is_exception(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_string(JSValue val);
+external int qjs_is_string(JSValue val);
 
 @ffi.Native<ffi.Int32 Function(JSValue)>()
-external int kjs_is_object(JSValue val);
+external int qjs_is_object(JSValue val);
 
 @ffi.Native<ffi.Bool Function(ffi.Pointer<JSContext>, JSValue)>()
 external bool JS_IsFunction(ffi.Pointer<JSContext> ctx, JSValue val);
@@ -263,7 +263,7 @@ ffi.Pointer<Utf8> JS_ToCStringLen2(
 }) => _JS_ToCStringLen2(ctx, plen, val, cesu8);
 
 @ffi.Native<ffi.Pointer<Utf8> Function(ffi.Pointer<JSContext>, JSValue)>()
-external ffi.Pointer<Utf8> kjs_to_c_string(
+external ffi.Pointer<Utf8> qjs_to_c_string(
   ffi.Pointer<JSContext> ctx,
   JSValue val,
 );
@@ -500,88 +500,88 @@ external int JS_PromiseState(ffi.Pointer<JSContext> ctx, JSValue promise);
 external JSValue JS_PromiseResult(ffi.Pointer<JSContext> ctx, JSValue promise);
 
 // ============================================================
-// Bridge queue (from kirahe_qjs_shim.c)
+// Bridge queue (from qjs_shim.c)
 // ============================================================
 
 @ffi.Native<
-  ffi.Pointer<KjsBridgeQueue> Function(
+  ffi.Pointer<QjsBridgeQueue> Function(
     ffi.Pointer<JSRuntime>,
     ffi.Pointer<JSContext>,
   )
 >()
-external ffi.Pointer<KjsBridgeQueue> kjs_bridge_init(
+external ffi.Pointer<QjsBridgeQueue> qjs_bridge_init(
   ffi.Pointer<JSRuntime> rt,
   ffi.Pointer<JSContext> ctx,
 );
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<KjsBridgeQueue>)>()
-external void kjs_bridge_cleanup(ffi.Pointer<KjsBridgeQueue> q);
+@ffi.Native<ffi.Void Function(ffi.Pointer<QjsBridgeQueue>)>()
+external void qjs_bridge_cleanup(ffi.Pointer<QjsBridgeQueue> q);
 
-@ffi.Native<ffi.Int32 Function(ffi.Pointer<KjsBridgeQueue>)>()
-external int kjs_bridge_pending_count(ffi.Pointer<KjsBridgeQueue> q);
+@ffi.Native<ffi.Int32 Function(ffi.Pointer<QjsBridgeQueue>)>()
+external int qjs_bridge_pending_count(ffi.Pointer<QjsBridgeQueue> q);
 
 @ffi.Native<
-  ffi.Pointer<Utf8> Function(ffi.Pointer<KjsBridgeQueue>, ffi.Pointer<ffi.Size>)
+  ffi.Pointer<Utf8> Function(ffi.Pointer<QjsBridgeQueue>, ffi.Pointer<ffi.Size>)
 >()
-external ffi.Pointer<Utf8> kjs_bridge_peek_payload(
-  ffi.Pointer<KjsBridgeQueue> q,
+external ffi.Pointer<Utf8> qjs_bridge_peek_payload(
+  ffi.Pointer<QjsBridgeQueue> q,
   ffi.Pointer<ffi.Size> outLen,
 );
 
 @ffi.Native<
   ffi.Pointer<Utf8> Function(
-    ffi.Pointer<KjsBridgeQueue>,
+    ffi.Pointer<QjsBridgeQueue>,
     ffi.Int32,
     ffi.Pointer<ffi.Size>,
   )
 >()
-external ffi.Pointer<Utf8> kjs_bridge_peek_payload_at(
-  ffi.Pointer<KjsBridgeQueue> q,
+external ffi.Pointer<Utf8> qjs_bridge_peek_payload_at(
+  ffi.Pointer<QjsBridgeQueue> q,
   int index,
   ffi.Pointer<ffi.Size> outLen,
 );
 
 @ffi.Native<
-  ffi.Int32 Function(ffi.Pointer<KjsBridgeQueue>, ffi.Pointer<Utf8>)
+  ffi.Int32 Function(ffi.Pointer<QjsBridgeQueue>, ffi.Pointer<Utf8>)
 >()
-external int kjs_bridge_resolve(
-  ffi.Pointer<KjsBridgeQueue> q,
+external int qjs_bridge_resolve(
+  ffi.Pointer<QjsBridgeQueue> q,
   ffi.Pointer<Utf8> resultJson,
 );
 
 @ffi.Native<
-  ffi.Int32 Function(ffi.Pointer<KjsBridgeQueue>, ffi.Pointer<Utf8>)
+  ffi.Int32 Function(ffi.Pointer<QjsBridgeQueue>, ffi.Pointer<Utf8>)
 >()
-external int kjs_bridge_reject(
-  ffi.Pointer<KjsBridgeQueue> q,
+external int qjs_bridge_reject(
+  ffi.Pointer<QjsBridgeQueue> q,
   ffi.Pointer<Utf8> errorMessage,
 );
 
 // ============================================================
-// Execution timeout (from kirahe_qjs_shim.c)
+// Execution timeout (from qjs_shim.c)
 // ============================================================
 
-@ffi.Native<ffi.Pointer<KjsTimeoutState> Function()>()
-external ffi.Pointer<KjsTimeoutState> kjs_timeout_new();
+@ffi.Native<ffi.Pointer<QjsTimeoutState> Function()>()
+external ffi.Pointer<QjsTimeoutState> qjs_timeout_new();
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<KjsTimeoutState>)>()
-external void kjs_timeout_free(ffi.Pointer<KjsTimeoutState> state);
+@ffi.Native<ffi.Void Function(ffi.Pointer<QjsTimeoutState>)>()
+external void qjs_timeout_free(ffi.Pointer<QjsTimeoutState> state);
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<KjsTimeoutState>, ffi.Int64)>()
-external void kjs_timeout_set(
-  ffi.Pointer<KjsTimeoutState> state,
+@ffi.Native<ffi.Void Function(ffi.Pointer<QjsTimeoutState>, ffi.Int64)>()
+external void qjs_timeout_set(
+  ffi.Pointer<QjsTimeoutState> state,
   int timeoutMs,
 );
 
-@ffi.Native<ffi.Void Function(ffi.Pointer<KjsTimeoutState>)>()
-external void kjs_timeout_clear(ffi.Pointer<KjsTimeoutState> state);
+@ffi.Native<ffi.Void Function(ffi.Pointer<QjsTimeoutState>)>()
+external void qjs_timeout_clear(ffi.Pointer<QjsTimeoutState> state);
 
 @ffi.Native<
-  ffi.Void Function(ffi.Pointer<JSRuntime>, ffi.Pointer<KjsTimeoutState>)
+  ffi.Void Function(ffi.Pointer<JSRuntime>, ffi.Pointer<QjsTimeoutState>)
 >()
-external void kjs_timeout_install(
+external void qjs_timeout_install(
   ffi.Pointer<JSRuntime> rt,
-  ffi.Pointer<KjsTimeoutState> state,
+  ffi.Pointer<QjsTimeoutState> state,
 );
 
 // ============================================================

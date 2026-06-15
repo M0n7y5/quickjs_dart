@@ -28,7 +28,7 @@ extension JsValueExtension on JSValue {
   bool get isNumber => tag == JsTag.int_ || tag == JsTag.float64;
 
   /// Whether this value has a reference count (negative tag).
-  /// Values with ref counts must be freed with [kjs_free_value].
+  /// Values with ref counts must be freed with [qjs_free_value].
   bool get hasRefCount => tag < 0;
 
   /// Extract int32 from the union (lower 32 bits).
@@ -92,7 +92,7 @@ dynamic jsValueToDart(
     }
   } finally {
     if (freeValue && value.hasRefCount) {
-      kjs_free_value(ctx, value);
+      qjs_free_value(ctx, value);
     }
   }
 }
@@ -100,16 +100,16 @@ dynamic jsValueToDart(
 /// Converts a Dart object to a [JSValue].
 JSValue dartToJsValue(ffi.Pointer<JSContext> ctx, Object? value) {
   if (value == null) {
-    return kjs_null();
+    return qjs_null();
   }
   if (value is bool) {
-    return kjs_new_bool(ctx, value ? 1 : 0);
+    return qjs_new_bool(ctx, value ? 1 : 0);
   }
   if (value is int) {
-    return kjs_new_int64(ctx, value);
+    return qjs_new_int64(ctx, value);
   }
   if (value is double) {
-    return kjs_new_float64(ctx, value);
+    return qjs_new_float64(ctx, value);
   }
   if (value is String) {
     final encoded = utf8.encode(value);
@@ -195,18 +195,18 @@ List<dynamic> _jsArrayToList(ffi.Pointer<JSContext> ctx, JSValue value) {
 
 Map<String, dynamic> _jsObjectToMap(ffi.Pointer<JSContext> ctx, JSValue value) {
   // Use JSON.stringify → parse for reliable conversion.
-  final undef = kjs_undefined();
+  final undef = qjs_undefined();
   final json = JS_JSONStringify(ctx, value, undef, undef);
 
   if (json.isException || json.isUndefined) {
     if (json.hasRefCount) {
-      kjs_free_value(ctx, json);
+      qjs_free_value(ctx, json);
     }
     return {};
   }
 
   final jsonStr = _jsStringToDart(ctx, json);
-  kjs_free_value(ctx, json);
+  qjs_free_value(ctx, json);
 
   final parsed = jsonDecode(jsonStr);
   if (parsed is Map) {
@@ -238,7 +238,7 @@ Exception _extractJsException(ffi.Pointer<JSContext> ctx) {
       calloc.free(plen);
     }
     if (msgVal.hasRefCount) {
-      kjs_free_value(ctx, msgVal);
+      qjs_free_value(ctx, msgVal);
     }
 
     // Try getting .stack property
@@ -256,11 +256,11 @@ Exception _extractJsException(ffi.Pointer<JSContext> ctx) {
       calloc.free(plen);
     }
     if (stackVal.hasRefCount) {
-      kjs_free_value(ctx, stackVal);
+      qjs_free_value(ctx, stackVal);
     }
   } finally {
     if (exception.hasRefCount) {
-      kjs_free_value(ctx, exception);
+      qjs_free_value(ctx, exception);
     }
   }
 

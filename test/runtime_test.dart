@@ -238,7 +238,7 @@ void main() {
       final result = runtime.evalRaw('"test"');
       expect(result.isString, isTrue);
       // Must free since strings are ref-counted
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('returns JSValue with correct tag for null', () {
@@ -260,7 +260,7 @@ void main() {
     test('returns JSValue with correct tag for object', () {
       final result = runtime.evalRaw('({})');
       expect(result.isObject, isTrue);
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('exception flag set for errors', () {
@@ -269,7 +269,7 @@ void main() {
       // Clear the exception from the context
       final exc = JS_GetException(runtime.context);
       if (exc.hasRefCount) {
-        kjs_free_value(runtime.context, exc);
+        qjs_free_value(runtime.context, exc);
       }
     });
   });
@@ -382,7 +382,7 @@ globalThis.importedAnswer = answer;
     test('isPromise detects promise', () {
       final result = runtime.evalRaw('Promise.resolve(42)');
       expect(runtime.isPromise(result), isTrue);
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('isPromise returns false for non-promise', () {
@@ -400,7 +400,7 @@ globalThis.importedAnswer = answer;
       final value = runtime.extractPromiseResult(result);
       expect(value, equals(42));
 
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('rejected promise state is rejected after pumping', () {
@@ -421,7 +421,7 @@ globalThis.importedAnswer = answer;
         ),
       );
 
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('chained promise resolves', () {
@@ -433,7 +433,7 @@ globalThis.importedAnswer = answer;
       expect(runtime.promiseState(result), equals(1));
       expect(runtime.extractPromiseResult(result), equals(21));
 
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
   });
 
@@ -488,7 +488,7 @@ globalThis.importedAnswer = answer;
           runtime.extractPromiseResult(result) as Map<String, dynamic>;
       expect(value['result'], equals('ok'));
 
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
 
     test('bridge_call reject produces rejected promise', () {
@@ -503,7 +503,7 @@ globalThis.importedAnswer = answer;
 
       expect(runtime.promiseState(result), equals(2)); // rejected
 
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
     });
   });
 
@@ -566,7 +566,7 @@ globalThis.importedAnswer = answer;
         // Clear the exception from the context
         final exc = JS_GetException(runtime.context);
         if (exc.hasRefCount) {
-          kjs_free_value(runtime.context, exc);
+          qjs_free_value(runtime.context, exc);
         }
       } finally {
         runtime
@@ -615,7 +615,7 @@ globalThis.importedAnswer = answer;
         expect(result.isException, isTrue);
         final exc = JS_GetException(runtime.context);
         if (exc.hasRefCount) {
-          kjs_free_value(runtime.context, exc);
+          qjs_free_value(runtime.context, exc);
         }
         runtime.clearDeadline();
 

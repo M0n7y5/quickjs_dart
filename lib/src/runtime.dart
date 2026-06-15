@@ -69,7 +69,7 @@ class QjsRuntime {
     _installModuleLoader();
 
     // Set up bridge (fjs.bridge_call on globalThis)
-    _bridgeQueue = kjs_bridge_init(_runtime, _context);
+    _bridgeQueue = qjs_bridge_init(_runtime, _context);
     if (_bridgeQueue == ffi.nullptr) {
       JS_FreeContext(_context);
       JS_FreeRuntime(_runtime);
@@ -80,22 +80,22 @@ class QjsRuntime {
     // original QuickJS does not: setTimeout, setInterval, URLSearchParams.
     _injectPolyfills();
 
-    _timeoutState = kjs_timeout_new();
+    _timeoutState = qjs_timeout_new();
     if (_timeoutState == ffi.nullptr) {
-      kjs_bridge_cleanup(_bridgeQueue);
+      qjs_bridge_cleanup(_bridgeQueue);
       JS_FreeContext(_context);
       JS_FreeRuntime(_runtime);
       throw StateError('Failed to allocate timeout state');
     }
-    kjs_timeout_install(_runtime, _timeoutState);
+    qjs_timeout_install(_runtime, _timeoutState);
     _executionTimeoutMs = config.executionTimeout.inMilliseconds;
   }
 
   late final ffi.Pointer<JSRuntime> _runtime;
   late final ffi.Pointer<JSContext> _context;
-  late final ffi.Pointer<KjsBridgeQueue> _bridgeQueue;
+  late final ffi.Pointer<QjsBridgeQueue> _bridgeQueue;
   var _disposed = false;
-  late final ffi.Pointer<KjsTimeoutState> _timeoutState;
+  late final ffi.Pointer<QjsTimeoutState> _timeoutState;
   late final int _executionTimeoutMs;
 
   /// Reusable size pointer for bridge payload peeks — avoids allocating
@@ -105,7 +105,7 @@ class QjsRuntime {
   /// The raw JSContext pointer.
   ///
   /// Exposed for the isolate-side code in [QjsEngine] that needs to call
-  /// [jsValueToDart] and [kjs_free_value] directly. Throws [StateError] if
+  /// [jsValueToDart] and [qjs_free_value] directly. Throws [StateError] if
   /// the runtime has been disposed — defends against use-after-free if a
   /// future refactor breaks the message-ordering invariants that currently
   /// keep `resolveBridge` / `rejectBridge` from firing post-dispose.
@@ -141,12 +141,12 @@ class QjsRuntime {
       // Non-fatal — log and continue. Plugins that need these will fail at
       // call-site with a clear error.
       if (result.hasRefCount) {
-        kjs_free_value(_context, result);
+        qjs_free_value(_context, result);
       }
       return;
     }
     if (result.hasRefCount) {
-      kjs_free_value(_context, result);
+      qjs_free_value(_context, result);
     }
   }
 
@@ -190,7 +190,7 @@ class QjsRuntime {
       }
 
       if (result.hasRefCount) {
-        kjs_free_value(_context, result);
+        qjs_free_value(_context, result);
       }
     } finally {
       calloc
@@ -242,12 +242,12 @@ class QjsRuntime {
   // ---------------------------------------------------------------------------
 
   /// Returns the number of pending bridge requests.
-  int get pendingBridgeCount => kjs_bridge_pending_count(_bridgeQueue);
+  int get pendingBridgeCount => qjs_bridge_pending_count(_bridgeQueue);
 
   /// Peeks at the next bridge request payload as a JSON string.
   /// Returns null if no requests pending.
   String? peekBridgePayload() {
-    final ptr = kjs_bridge_peek_payload(_bridgeQueue, _bridgeSizePtr);
+    final ptr = qjs_bridge_peek_payload(_bridgeQueue, _bridgeSizePtr);
     if (ptr == ffi.nullptr) {
       return null;
     }
@@ -266,7 +266,7 @@ class QjsRuntime {
     final payloads = <String>[];
 
     for (var i = 0; i < count; i++) {
-      final ptr = kjs_bridge_peek_payload_at(_bridgeQueue, i, _bridgeSizePtr);
+      final ptr = qjs_bridge_peek_payload_at(_bridgeQueue, i, _bridgeSizePtr);
       if (ptr == ffi.nullptr) {
         break;
       }
@@ -287,7 +287,7 @@ class QjsRuntime {
     _assertNotDisposed();
     _updateStackTop();
     final ptr = resultJson.toNativeUtf8();
-    kjs_bridge_resolve(_bridgeQueue, ptr);
+    qjs_bridge_resolve(_bridgeQueue, ptr);
     calloc.free(ptr);
   }
 
@@ -297,7 +297,7 @@ class QjsRuntime {
   void rejectBridge(String errorMessage) {
     _assertNotDisposed();
     final ptr = errorMessage.toNativeUtf8();
-    kjs_bridge_reject(_bridgeQueue, ptr);
+    qjs_bridge_reject(_bridgeQueue, ptr);
     calloc.free(ptr);
   }
 
@@ -339,7 +339,7 @@ class QjsRuntime {
 
     final isFn = JS_IsFunction(_context, thenVal);
     if (thenVal.hasRefCount) {
-      kjs_free_value(_context, thenVal);
+      qjs_free_value(_context, thenVal);
     }
     return isFn;
   }
@@ -367,7 +367,7 @@ class QjsRuntime {
       final plen = calloc<ffi.Size>();
       final cstr = JS_ToCStringLen2(_context, plen, msgVal);
       if (msgVal.hasRefCount) {
-        kjs_free_value(_context, msgVal);
+        qjs_free_value(_context, msgVal);
       }
 
       if (cstr != ffi.nullptr) {
@@ -384,7 +384,7 @@ class QjsRuntime {
           final slen = calloc<ffi.Size>();
           final scstr = JS_ToCStringLen2(_context, slen, stackVal);
           if (stackVal.hasRefCount) {
-            kjs_free_value(_context, stackVal);
+            qjs_free_value(_context, stackVal);
           }
           if (scstr != ffi.nullptr) {
             final stack = scstr.toDartString(length: slen.value);
@@ -394,14 +394,14 @@ class QjsRuntime {
           }
           calloc.free(slen);
         } else if (stackVal.hasRefCount) {
-          kjs_free_value(_context, stackVal);
+          qjs_free_value(_context, stackVal);
         }
 
         return message;
       }
       calloc.free(plen);
     } else if (msgVal.hasRefCount) {
-      kjs_free_value(_context, msgVal);
+      qjs_free_value(_context, msgVal);
     }
 
     // Not an Error object — fall back to generic conversion.
@@ -439,8 +439,8 @@ class QjsRuntime {
     _instances.remove(_runtime.address);
 
     calloc.free(_bridgeSizePtr);
-    kjs_timeout_free(_timeoutState);
-    kjs_bridge_cleanup(_bridgeQueue);
+    qjs_timeout_free(_timeoutState);
+    qjs_bridge_cleanup(_bridgeQueue);
     JS_FreeContext(_context);
     JS_FreeRuntime(_runtime);
   }
@@ -566,12 +566,12 @@ class QjsRuntime {
   void setDeadline([int timeoutMs = 0]) {
     final ms = timeoutMs > 0 ? timeoutMs : _executionTimeoutMs;
     if (ms > 0) {
-      kjs_timeout_set(_timeoutState, ms);
+      qjs_timeout_set(_timeoutState, ms);
     }
   }
 
   /// Clears the execution deadline (disables timeout).
-  void clearDeadline() => kjs_timeout_clear(_timeoutState);
+  void clearDeadline() => qjs_timeout_clear(_timeoutState);
 
   /// Extracts the current pending exception from the JS context.
   ///
@@ -596,7 +596,7 @@ class QjsRuntime {
       calloc.free(plen);
     }
     if (msgVal.hasRefCount) {
-      kjs_free_value(_context, msgVal);
+      qjs_free_value(_context, msgVal);
     }
 
     final stackKey = 'stack'.toNativeUtf8();
@@ -613,11 +613,11 @@ class QjsRuntime {
       calloc.free(plen);
     }
     if (stackVal.hasRefCount) {
-      kjs_free_value(_context, stackVal);
+      qjs_free_value(_context, stackVal);
     }
 
     if (exception.hasRefCount) {
-      kjs_free_value(_context, exception);
+      qjs_free_value(_context, exception);
     }
 
     if (stack != null) {

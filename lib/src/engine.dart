@@ -36,7 +36,7 @@ typedef BridgeHandler = Future<Object?> Function(Map<String, dynamic> payload);
 ///   },
 /// );
 ///
-/// engine.declareModule('kirahe', sdkSource);
+/// engine.declareModule('sdk', sdkSource);
 /// await engine.evalModule('plugin', pluginSource);
 /// final result = await engine.eval('import("plugin").then(m => m.run())');
 ///
@@ -473,7 +473,7 @@ Future<void> _handleEval(
     if (result.isException) {
       runtime.clearDeadline();
       final err = runtime.extractException();
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
       sendPort.send(_ResultError(err.toString()));
       return;
     }
@@ -560,7 +560,7 @@ Future<void> _handleEval(
             promiseResult,
             freeValue: true,
           );
-          kjs_free_value(runtime.context, result);
+          qjs_free_value(runtime.context, result);
           sendPort.send(_ResultOk(dartValue));
           return;
         }
@@ -573,8 +573,8 @@ Future<void> _handleEval(
           runtime.clearDeadline();
           final promiseResult = runtime.promiseResult(result);
           final errMsg = runtime.extractErrorString(promiseResult);
-          kjs_free_value(runtime.context, promiseResult);
-          kjs_free_value(runtime.context, result);
+          qjs_free_value(runtime.context, promiseResult);
+          qjs_free_value(runtime.context, result);
           sendPort.send(_ResultError('JS Promise rejected: $errMsg'));
           return;
         }
@@ -585,7 +585,7 @@ Future<void> _handleEval(
           runtime.executePendingJobs();
           if (runtime.pendingBridgeCount == 0 && !runtime.hasPendingJobs) {
             runtime.clearDeadline();
-            kjs_free_value(runtime.context, result);
+            qjs_free_value(runtime.context, result);
             sendPort.send(
               const _ResultError(
                 'Promise stuck: no pending jobs or bridge requests',
@@ -597,7 +597,7 @@ Future<void> _handleEval(
       }
 
       runtime.clearDeadline();
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
       sendPort.send(
         const _ResultError(
           'Promise resolution exceeded $maxIterations pump iterations. '
@@ -609,7 +609,7 @@ Future<void> _handleEval(
       // Ensure the result JSValue is freed even if an exception is thrown
       // during bridge processing or job pumping.
       runtime.clearDeadline();
-      kjs_free_value(runtime.context, result);
+      qjs_free_value(runtime.context, result);
       rethrow;
     }
   } on Object catch (e) {

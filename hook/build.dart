@@ -25,7 +25,7 @@ void main(List<String> args) async {
       '$quickjsDir/dtoa.c',
       '$quickjsDir/libregexp.c',
       '$quickjsDir/libunicode.c',
-      '$quickjsDir/kirahe_qjs_shim.c',
+      '$quickjsDir/qjs_shim.c',
     ];
 
     final defines = <String, String?>{
