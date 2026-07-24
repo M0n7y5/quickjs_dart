@@ -60,7 +60,16 @@ void main(List<String> args) async {
 
       if (targetOS == OS.linux || targetOS == OS.android) {
         libraries.add('m');
-        flags.addAll(['-fPIC', '-fno-strict-aliasing', '-fwrapv']);
+        flags.addAll([
+          '-fPIC',
+          '-fno-strict-aliasing',
+          '-fwrapv',
+          // QuickJS exports generic names (js_free, js_malloc, …) that collide
+          // with other process-global JS engines. media_kit → libmpv → libmujs
+          // also exports js_free/js_malloc; without symbolic binding, this DSO's
+          // PLT resolves to mujs and SIGSEGVs inside JS_Eval/js_create_function.
+          '-Wl,-Bsymbolic-functions',
+        ]);
       }
     } else {
       flags.add('/experimental:c11atomics');
