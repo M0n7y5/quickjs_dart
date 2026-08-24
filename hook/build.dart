@@ -41,8 +41,11 @@ void main(List<String> args) async {
       defines['JS_EXTERN'] = '__attribute__((visibility("default")))';
     }
 
-    // Disable computed goto on Linux and Android to prevent SIGSEGV
-    if (targetOS == OS.linux || targetOS == OS.android) {
+    // Disable computed goto: MSVC has no labels-as-values, and it SIGSEGVs on
+    // Linux and Android (see -Bsymbolic-functions below).
+    if (targetOS == OS.linux ||
+        targetOS == OS.android ||
+        targetOS == OS.windows) {
       defines['DIRECT_DISPATCH'] = '0';
     }
 
@@ -72,14 +75,19 @@ void main(List<String> args) async {
         ]);
       }
     } else {
-      flags.add('/experimental:c11atomics');
+      // src/msvc holds a <sys/time.h> MSVC lacks; msvc_compat.h maps the GNU
+      // spellings cutils.h and quickjs.c are written against.
+      flags.addAll([
+        '/experimental:c11atomics',
+        '/FI${input.packageRoot.resolve('src/msvc_compat.h').toFilePath()}',
+      ]);
     }
 
     final builder = CBuilder.library(
       name: 'quickjs_dart',
       assetName: 'src/bindings.dart',
       sources: sources,
-      includes: [quickjsDir],
+      includes: [quickjsDir, if (targetOS == OS.windows) 'src/msvc'],
       defines: defines,
       flags: flags,
       libraries: libraries,
