@@ -15,6 +15,8 @@
 #ifdef _MSC_VER
 
 #include <intrin.h>
+#include <time.h>
+#include <windows.h>
 #include <malloc.h>
 #include <stdint.h>
 
@@ -67,6 +69,25 @@ static __forceinline int quickjs_dart_ctz64(uint64_t a) {
 #define __builtin_clzll(a) quickjs_dart_clz64(a)
 #define __builtin_ctz(a) quickjs_dart_ctz32(a)
 #define __builtin_ctzll(a) quickjs_dart_ctz64(a)
+
+/* qjs_shim.c times its execution deadline with clock_gettime(CLOCK_MONOTONIC),
+ * which the UCRT does not provide. QueryPerformanceCounter is the monotonic
+ * clock on Windows and is unaffected by wall-clock changes. */
+#define CLOCK_MONOTONIC 1
+
+static __forceinline int clock_gettime(int clock_id, struct timespec *ts) {
+  LARGE_INTEGER frequency;
+  LARGE_INTEGER counter;
+
+  (void)clock_id;
+  QueryPerformanceFrequency(&frequency);
+  QueryPerformanceCounter(&counter);
+  ts->tv_sec = (time_t)(counter.QuadPart / frequency.QuadPart);
+  ts->tv_nsec =
+      (long)(((counter.QuadPart % frequency.QuadPart) * 1000000000LL) /
+             frequency.QuadPart);
+  return 0;
+}
 
 #endif /* _MSC_VER */
 
