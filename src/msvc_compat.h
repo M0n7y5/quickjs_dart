@@ -15,6 +15,7 @@
 #ifdef _MSC_VER
 
 #include <intrin.h>
+#include <errno.h>
 #include <time.h>
 #include <windows.h>
 #include <malloc.h>
@@ -34,6 +35,8 @@
  *   instance comes from the host malloc, which is 16-byte aligned on Windows.
  */
 #define __attribute__(ignored_gnu_attributes)
+/* dump_token() uses the single-underscore spelling. */
+#define __attribute(ignored_gnu_attributes)
 
 #define alloca _alloca
 
@@ -70,9 +73,12 @@ static __forceinline int quickjs_dart_ctz64(uint64_t a) {
 #define __builtin_ctz(a) quickjs_dart_ctz32(a)
 #define __builtin_ctzll(a) quickjs_dart_ctz64(a)
 
-/* qjs_shim.c times its execution deadline with clock_gettime(CLOCK_MONOTONIC),
- * which the UCRT does not provide. QueryPerformanceCounter is the monotonic
- * clock on Windows and is unaffected by wall-clock changes. */
+/* qjs_shim.c times its execution deadline with clock_gettime(CLOCK_MONOTONIC)
+ * and Atomics.wait builds a deadline from CLOCK_REALTIME; the UCRT provides
+ * neither. QueryPerformanceCounter serves both: every consumer here only ever
+ * compares two readings taken through this shim, never against wall time.
+ */
+#define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 1
 
 static __forceinline int clock_gettime(int clock_id, struct timespec *ts) {
@@ -87,6 +93,68 @@ static __forceinline int clock_gettime(int clock_id, struct timespec *ts) {
       (long)(((counter.QuadPart % frequency.QuadPart) * 1000000000LL) /
              frequency.QuadPart);
   return 0;
+}
+
+/* Atomics.wait/notify (CONFIG_ATOMICS) is the only pthread user in quickjs.c,
+ * and it needs a mutex plus a condition variable. Win32 has both natively;
+ * the SRW lock is what SleepConditionVariableSRW pairs with. */
+typedef SRWLOCK pthread_mutex_t;
+typedef CONDITION_VARIABLE pthread_cond_t;
+
+#define PTHREAD_MUTEX_INITIALIZER SRWLOCK_INIT
+
+static __forceinline int pthread_mutex_lock(pthread_mutex_t *mutex) {
+  AcquireSRWLockExclusive(mutex);
+  return 0;
+}
+
+static __forceinline int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+  ReleaseSRWLockExclusive(mutex);
+  return 0;
+}
+
+static __forceinline int pthread_cond_init(pthread_cond_t *cond, void *attr) {
+  (void)attr;
+  InitializeConditionVariable(cond);
+  return 0;
+}
+
+/* A Win32 condition variable holds no resources to release. */
+static __forceinline int pthread_cond_destroy(pthread_cond_t *cond) {
+  (void)cond;
+  return 0;
+}
+
+static __forceinline int pthread_cond_signal(pthread_cond_t *cond) {
+  WakeConditionVariable(cond);
+  return 0;
+}
+
+static __forceinline int pthread_cond_wait(pthread_cond_t *cond,
+                                           pthread_mutex_t *mutex) {
+  SleepConditionVariableSRW(cond, mutex, INFINITE, 0);
+  return 0;
+}
+
+/* The deadline the caller passes was read from the clock_gettime above, so
+ * both sides share the QueryPerformanceCounter epoch and the difference is
+ * meaningful even though it is not CLOCK_REALTIME. */
+static __forceinline int pthread_cond_timedwait(pthread_cond_t *cond,
+                                                pthread_mutex_t *mutex,
+                                                const struct timespec *abstime) {
+  struct timespec now;
+  int64_t remaining_ms;
+
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  remaining_ms = ((int64_t)abstime->tv_sec - (int64_t)now.tv_sec) * 1000 +
+                 ((int64_t)abstime->tv_nsec - (int64_t)now.tv_nsec) / 1000000;
+  if (remaining_ms < 0) {
+    remaining_ms = 0;
+  }
+  if (SleepConditionVariableSRW(cond, mutex, (DWORD)remaining_ms, 0)) {
+    return 0;
+  }
+  return GetLastError() == ERROR_TIMEOUT ? ETIMEDOUT : 0;
 }
 
 #endif /* _MSC_VER */
