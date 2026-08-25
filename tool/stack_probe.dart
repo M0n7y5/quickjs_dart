@@ -71,6 +71,57 @@ void main() {
     ..free(source)
     ..free(filename);
 
+  mark('JS_SetModuleLoaderFunc');
+  JS_SetModuleLoaderFunc(
+    runtime,
+    ffi.Pointer.fromFunction(_normalize),
+    ffi.Pointer.fromFunction(_load),
+    runtime.cast(),
+  );
+  mark('eval after loader install');
+  _eval(context, '2 + 2');
+
+  mark('qjs_timeout_install');
+  qjs_timeout_install(runtime, timeout);
+  mark('eval under interrupt handler');
+  _eval(context, '3 + 3');
+
+  mark('eval a polyfill-shaped source');
+  _eval(context, '''
+    globalThis.setTimeout = function (fn, ms) { return 0; };
+    globalThis.clearTimeout = function (id) {};
+    class URLSearchParams {
+      constructor(init) { this._pairs = []; }
+      get(name) { return null; }
+    }
+    globalThis.URLSearchParams = URLSearchParams;
+    1;
+  ''');
+
   mark('--- probe finished');
   print(File('probe.log').readAsStringSync());
 }
+
+void _eval(ffi.Pointer<JSContext> context, String code) {
+  final source = code.toNativeUtf8();
+  final filename = '<probe>'.toNativeUtf8();
+  final value = JS_Eval(context, source, source.length, filename, 0);
+  mark('  tag ${value.tag}');
+  qjs_free_value(context, value);
+  calloc
+    ..free(source)
+    ..free(filename);
+}
+
+ffi.Pointer<Utf8> _normalize(
+  ffi.Pointer<JSContext> ctx,
+  ffi.Pointer<Utf8> base,
+  ffi.Pointer<Utf8> name,
+  ffi.Pointer<ffi.Void> opaque,
+) => js_strdup(ctx, name);
+
+ffi.Pointer<JSModuleDef> _load(
+  ffi.Pointer<JSContext> ctx,
+  ffi.Pointer<Utf8> name,
+  ffi.Pointer<ffi.Void> opaque,
+) => ffi.nullptr;
