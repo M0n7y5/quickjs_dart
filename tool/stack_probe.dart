@@ -36,6 +36,8 @@ void reportThreadStack() {
 
 void main() {
   mark('--- probe start');
+  qjs_install_crt_diagnostics();
+  mark('crt diagnostics installed');
   reportThreadStack();
 
   mark('JS_NewRuntime');

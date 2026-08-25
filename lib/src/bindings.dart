@@ -584,6 +584,14 @@ external void qjs_timeout_install(
   ffi.Pointer<QjsTimeoutState> state,
 );
 
+/// Routes this DLL's CRT runtime checks to `qjs_crt.log`.
+///
+/// On Windows those checks end the process through `__fastfail`, which leaves
+/// no crash report; the handlers name the failing call instead. A no-op
+/// elsewhere.
+@ffi.Native<ffi.Void Function()>()
+external void qjs_install_crt_diagnostics();
+
 // ============================================================
 // Memory allocation (JS allocator)
 // ============================================================
