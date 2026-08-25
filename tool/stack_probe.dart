@@ -1,11 +1,12 @@
+// A diagnostic whose whole output is its printed report.
 // ignore_for_file: avoid_print
 
 import 'dart:isolate';
 
 import 'package:quickjs_dart/src/runtime.dart';
 
-int deepestJsRecursion() {
-  final runtime = QjsRuntime(const QjsRuntimeConfig());
+int deepestJsRecursion(int maxStackSize) {
+  final runtime = QjsRuntime(QjsRuntimeConfig(maxStackSize: maxStackSize));
   try {
     return runtime.evalSync('''
       let depth = 0;
@@ -19,7 +20,12 @@ int deepestJsRecursion() {
 }
 
 Future<void> main() async {
-  print('main isolate depth: ${deepestJsRecursion()}');
-  print('spawned isolate depth: ${await Isolate.run(deepestJsRecursion)}');
+  for (final kb in [32, 64, 128, 192, 256, 384, 512]) {
+    print('main $kb KB -> depth ${deepestJsRecursion(kb * 1024)}');
+  }
+  for (final kb in [32, 64, 128, 192, 256, 384, 512]) {
+    final depth = await Isolate.run(() => deepestJsRecursion(kb * 1024));
+    print('spawned $kb KB -> depth $depth');
+  }
   print('probe finished');
 }
