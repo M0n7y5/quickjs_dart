@@ -86,17 +86,27 @@ void main() {
   mark('eval under interrupt handler');
   _eval(context, '3 + 3');
 
-  mark('eval a polyfill-shaped source');
-  _eval(context, '''
-    globalThis.setTimeout = function (fn, ms) { return 0; };
-    globalThis.clearTimeout = function (id) {};
-    class URLSearchParams {
-      constructor(init) { this._pairs = []; }
-      get(name) { return null; }
-    }
-    globalThis.URLSearchParams = URLSearchParams;
-    1;
-  ''');
+  const snippets = <String, String>{
+    'function expression': 'var f = function (a, b) { return 0; }; f(1, 2);',
+    'globalThis assignment': 'globalThis.g = function (a) { return a; }; g(1);',
+    'array literal in ctor': 'class A { constructor(i) { this.p = []; } } 1;',
+    'getter': 'class B { get x() { return 1; } } new B().x;',
+    'method named get': 'class C { get(n) { return null; } } new C().get(1);',
+    'full polyfill shape': '''
+      globalThis.setTimeout = function (fn, ms) { return 0; };
+      globalThis.clearTimeout = function (id) {};
+      class URLSearchParams {
+        constructor(init) { this._pairs = []; }
+        get(name) { return null; }
+      }
+      globalThis.URLSearchParams = URLSearchParams;
+      1;
+    ''',
+  };
+  for (final snippet in snippets.entries) {
+    mark('eval ${snippet.key}');
+    _eval(context, snippet.value);
+  }
 
   mark('--- probe finished');
   print(File('probe.log').readAsStringSync());
