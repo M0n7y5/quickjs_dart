@@ -85,11 +85,6 @@ void main(List<String> args) async {
         '/experimental:c11atomics',
         '/FI${input.packageRoot.resolve('src/msvc_compat.h').toFilePath()}',
         '/FI${exportDirectives.toFilePath()}',
-        // Diagnostic knob for the MSVC bring-up: lets CI compare builds
-        // (allocator choice, /GS) without editing this file per run.
-        ...?Platform.environment['QJS_MSVC_EXTRA']?.split(' ').where(
-          (flag) => flag.isNotEmpty,
-        ),
       ]);
     }
 
