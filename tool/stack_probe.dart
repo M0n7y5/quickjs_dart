@@ -87,21 +87,16 @@ void main() {
   _eval(context, '3 + 3');
 
   const snippets = <String, String>{
-    'function expression': 'var f = function (a, b) { return 0; }; f(1, 2);',
-    'globalThis assignment': 'globalThis.g = function (a) { return a; }; g(1);',
-    'array literal in ctor': 'class A { constructor(i) { this.p = []; } } 1;',
-    'getter': 'class B { get x() { return 1; } } new B().x;',
-    'method named get': 'class C { get(n) { return null; } } new C().get(1);',
-    'full polyfill shape': '''
-      globalThis.setTimeout = function (fn, ms) { return 0; };
-      globalThis.clearTimeout = function (id) {};
-      class URLSearchParams {
-        constructor(init) { this._pairs = []; }
-        get(name) { return null; }
-      }
-      globalThis.URLSearchParams = URLSearchParams;
-      1;
-    ''',
+    'string literal': '"hello";',
+    'object literal': 'var o = { a: 1 }; o.a;',
+    'define function only': 'var f = function (a, b) { return 0; }; 1;',
+    'builtin call': 'Math.max(1, 2);',
+    'js call, no args': '(function () { return 1; })();',
+    'js call with args': 'f(1, 2);',
+    'arrow call': '(() => 1)();',
+    'builtin with callback': '[1, 2].map(function (x) { return x; }).length;',
+    'class declaration': 'class A { constructor(i) { this.p = []; } } 1;',
+    'class instantiation': 'new A(1).p.length;',
   };
   for (final snippet in snippets.entries) {
     mark('eval ${snippet.key}');
