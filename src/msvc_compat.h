@@ -40,11 +40,6 @@
 
 #define alloca _alloca
 
-/* The engine ends the process through abort() on its sanity branches, and on
- * Windows that leaves no report at all (__fastfail). Name the call site. */
-void qjs_abort_report(const char *file, int line);
-#define abort() qjs_abort_report(__FILE__, __LINE__)
-
 /* `__builtin_frame_address(0)` is only used to sample a stack address for the
  * stack-overflow guard, which is what the return address slot gives us. */
 #define __builtin_frame_address(level) _AddressOfReturnAddress()
