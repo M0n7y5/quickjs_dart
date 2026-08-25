@@ -3,18 +3,21 @@
 
 import 'dart:ffi' as ffi;
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:quickjs_dart/src/runtime.dart';
+import 'package:quickjs_dart/src/bindings.dart';
 
-/// Appended with `flush: true` so a hard crash (the Windows probe dies with
-/// 0xC0000409) cannot swallow the last marker, which is the one that matters.
+/// Appended with `flush: true` so the hard crash this measures (0xC0000409 on
+/// Windows) cannot swallow the last marker, which is the one that names it.
 void mark(String line) {
-  File('probe.log').writeAsStringSync('$line\n', mode: FileMode.append, flush: true);
+  File('probe.log').writeAsStringSync(
+    '$line\n',
+    mode: FileMode.append,
+    flush: true,
+  );
 }
 
-void reportThreadStack(String where) {
+void reportThreadStack() {
   if (!Platform.isWindows) {
     return;
   }
@@ -25,37 +28,49 @@ void reportThreadStack(String where) {
         void Function(ffi.Pointer<ffi.Uint64>, ffi.Pointer<ffi.Uint64>)>(
       'GetCurrentThreadStackLimits',
     )(limits, limits + 1);
-    final reserve = limits[1] - limits[0];
-    mark('$where thread stack reserve ${reserve ~/ 1024} KB');
+    mark('thread stack reserve ${(limits[1] - limits[0]) ~/ 1024} KB');
   } finally {
     calloc.free(limits);
   }
 }
 
-void sweep(String where) {
-  reportThreadStack(where);
-  for (final kb in [32, 64, 128, 192, 256, 384, 512]) {
-    mark('$where $kb KB: creating');
-    final runtime = QjsRuntime(QjsRuntimeConfig(maxStackSize: kb * 1024));
-    mark('$where $kb KB: created');
-    try {
-      final depth = runtime.evalSync('''
-        let depth = 0;
-        function recurse() { depth++; recurse(); }
-        try { recurse(); } catch (e) {}
-        depth;
-      ''');
-      mark('$where $kb KB: depth $depth');
-    } finally {
-      runtime.dispose();
-    }
-  }
-}
-
-Future<void> main() async {
+void main() {
   mark('--- probe start');
-  sweep('main');
-  await Isolate.run(() => sweep('spawned'));
+  reportThreadStack();
+
+  mark('JS_NewRuntime');
+  final runtime = JS_NewRuntime();
+  mark('runtime = ${runtime.address}');
+
+  mark('JS_SetMemoryLimit');
+  JS_SetMemoryLimit(runtime, 64 * 1024 * 1024);
+  mark('JS_SetMaxStackSize');
+  JS_SetMaxStackSize(runtime, 512 * 1024);
+  mark('JS_SetGCThreshold');
+  JS_SetGCThreshold(runtime, 16 * 1024 * 1024);
+
+  mark('JS_NewContext');
+  final context = JS_NewContext(runtime);
+  mark('context = ${context.address}');
+
+  mark('qjs_bridge_init');
+  final queue = qjs_bridge_init(runtime, context);
+  mark('queue = ${queue.address}');
+
+  mark('qjs_timeout_new');
+  final timeout = qjs_timeout_new();
+  mark('timeout = ${timeout.address}');
+
+  mark('eval 1+1');
+  final source = '1 + 1'.toNativeUtf8();
+  final filename = '<probe>'.toNativeUtf8();
+  final value = JS_Eval(context, source, source.length, filename, 0);
+  mark('eval tag ${value.tag}');
+  qjs_free_value(context, value);
+  calloc
+    ..free(source)
+    ..free(filename);
+
   mark('--- probe finished');
   print(File('probe.log').readAsStringSync());
 }
